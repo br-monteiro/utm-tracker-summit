@@ -1,0 +1,55 @@
+<script async src="https://d390qphybw14q2.cloudfront.net/UniversalUtmTracker/UniversalUtmTracker.min.js"></script>
+<script>
+  /**
+   * Execute a Callback function with a condition with certain frequency
+   * @param { Function } callback The callback to be called
+   * @param { Function | Number } when The function or number in milliseconds that indicates when the callback is called
+   * @param { Function } stop The function that indicates when the interval must be stopped. This function receives two arguments: the number of current execution and the result of When function
+   * @param { Number } frequency The frequency of execution of retries
+   * @return { void }
+   */
+  function executer(callback, when, stop, frequency) {
+    if (typeof callback !== 'function') {
+      throw new Error('The "callback" is not a function');
+    }
+    var currentExecution = 1;
+    frequency = frequency || 0;
+    frequency = (typeof when === 'number' && parseInt(when, 10)) || frequency;
+    stop = (typeof stop === 'function' && stop) || function () { return true; };
+    when = (typeof when === 'function' && when) || function () { return true; };
+    var interval = setInterval(function handlerInterval() {
+      var resultOfWhenFunction = when(currentExecution);
+      if (resultOfWhenFunction) {
+        callback(resultOfWhenFunction, currentExecution);
+      }
+      if (stop(currentExecution, resultOfWhenFunction)) {
+        clearInterval(interval);
+      }
+      currentExecution += 1;
+    }, frequency);
+  }
+
+  executer(function handler(utmTracker) {
+    var utm = new utmTracker();
+
+    utm.then(function (utmObject) {
+      document
+        .querySelectorAll('a[href*=inscricao-email]')
+        .forEach(function (element) {
+          var url = new URL(element.href);
+
+          url.searchParams.set("utm_source", utmObject.utm.source);
+          url.searchParams.set("utm_medium", utmObject.utm.medium);
+          url.searchParams.set("utm_campaign", utmObject.utm.campaign);
+          url.searchParams.set("utm_content", utmObject.utm.content);
+          url.searchParams.set("utm_term", utmObject.utm.term);
+
+          element.href = url.href;
+        });
+    });
+  }, function when() {
+    return window.UniversalUtmTracker;
+  }, function stop(i, w) {
+    return i === 10 || w;
+  }, 500);
+</script>
